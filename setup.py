@@ -1,6 +1,8 @@
 from setuptools import setup, find_packages
 from aminos.__init__ import version
-with open("README.md", "r") as readme: long_description = readme.read()
+
+with open("README.md", "r") as readme:
+    long_description = readme.read()
 
 
 setup(
