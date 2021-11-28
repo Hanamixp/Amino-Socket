@@ -9,10 +9,12 @@
 ](https://pypi.org/project/Amino-Socket/)
 
 
-###Amino-Socket 
+##Amino-Socket 
+
 Amino-Socket is an Amino client for Python. It provides to access [aminoapps](https://aminoapps.com) WebSockets.
 
-###Installation
+##Installation
+
 You can use either `python3 setup.py install` or `pip3 install Amino-Socket` to install.
 
 - **Note** This Python Module tested on `python3.10`
