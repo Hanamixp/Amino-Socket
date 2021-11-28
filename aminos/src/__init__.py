@@ -1,1 +1,1 @@
-from .exception import Exception
+from .exception import exception

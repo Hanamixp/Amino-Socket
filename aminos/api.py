@@ -385,6 +385,15 @@ class Wss:
         **Parameters**
             - **headers**: Your Amino Headers (dict)
         """
+        heders = {
+            "Content-Type": "application/json; charset=utf-8",
+            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 9; Redmi Note 8 Build/PKQ1.190616.001; com.narvii.amino.master/3.4.33578)",
+            "AUID": "dfec1b8a-92f7-4cf0-928c-3b60aa33429a",
+            "SMDEVICEID": "6e28d4c5-2d25-4977-93ec-9a4ce077fb7b",
+            "Host": "service.narvii.com",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+        }
         self.narvi = "https://service.narvii.com/api/v1/"
         self.api = 'https://aminoapps.com/api-p'
         self.socket_url = "wss://ws1.narvii.com"
@@ -394,8 +403,11 @@ class Wss:
         if headers.get("NDCAUTH") and headers.get("NDCDEVICEID"):
             self.sid = headers["NDCAUTH"]
             self.deviceid = headers["NDCDEVICEID"]
-            header.headers = headers
+            heders["NDCDEVICEID"] = self.deviceid
+            heders["NDCAUTH"] = self.sid
+            header.headers = heders
             self.headers = header.Headers().headers
+
         else:
             exception({"api:message": "Headers Should Contains \"NDCAUTH\" and \"NDCDEVICEID\" header or key"})
 
@@ -418,11 +430,11 @@ class Wss:
         return json.loads(self.socket.recv())
 
     def webSocketUrl(self):
-        req = requests.get("https://aminoapps.com/api/chat/web-socket-url", headers={'cookie': self.sid})
-        if req.status_code != 200:
-            return exception(req.json())
+        response = requests.get("https://aminoapps.com/api/chat/web-socket-url", headers={'cookie': self.sid})
+        if response.status_code != 200:
+            return exception(response.json())
         else:
-            self.socket_url = req.json()["result"]["url"]
+            self.socket_url = response.json()["result"]["url"]
             return self.socket_url
 
     def launch(self):
@@ -454,11 +466,11 @@ class Wss:
         headers["content-type"] = typee
         headers["content-length"] = str(len(data))
 
-        req = requests.post(f"{self.api}/g/s/media/upload", data=data, headers=headers)
-        if req.json()["api:statuscode"] != 0:
-            return exception(req.json())
+        response = requests.post(f"{self.api}/g/s/media/upload", data=data, headers=headers)
+        if response.json()["api:statuscode"] != 0:
+            return exception(response.json())
         else:
-            return req.json()["mediaValue"]
+            return response.json()["mediaValue"]
 
     def sendActive(self, comId: str, rang: int = 1, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(time() * 1000)):
         """
@@ -486,9 +498,7 @@ class Wss:
             data["userActiveTimeChunkList"] = timers
 
         data = json_minify(json.dumps(data))
-        headers = self.headers
-        headers["Content-Type"] = "application/json; charset=utf-8",
-        headers["User-Agent"] = "Dalvik/2.1.0 (Linux; U; Android 9; Redmi Note 8 Build/PKQ1.190616.001; com.narvii.amino.master/3.4.33578)",
+        headers: dict = self.headers
         headers["NDC-MSG-SIG"] = base64.b64encode(b"\x22" + hmac.new(bytes.fromhex("307c3c8cd389e69dc298d951341f88419a8377f4"), data.encode(), sha1).digest()).decode()
         headers["Content-Length"] = str(len(data))
         response = requests.post(f"{self.narvi}/x{comId}/s/community/stats/user-active-time", headers=headers, data=data)
