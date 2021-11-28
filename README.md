@@ -1,5 +1,5 @@
 [
-![pypi](https://img.shields.io/badge/Amino_Sockets-Examples-orange)
+![pypi](https://img.shields.io/badge/Amino_Sockets-Docs-orange)
 ](https://https://amino-socket.readthedocs.io/)
 [
 ![pypi](https://img.shields.io/badge/Amino--Socket%20build%20and%20test-passing-brightgreen?logo=github&labelColor=black)
