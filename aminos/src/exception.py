@@ -3,5 +3,5 @@ class Except(Exception):
         Exception.__init__(*args, **kwargs)
 
 
-def Exception(data):
+def exception(data):
     raise Except(data)
