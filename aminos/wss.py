@@ -14,19 +14,15 @@ class SetAction:
         self.wss = wss
 
     def start(self):
-
         """
         Start the Action
         """
-
         self.wss.send(self.action)
 
     def stop(self):
-
         """
         Get back to the last board
         """
-
         act = self.action
         act["t"] = 303
         self.wss.send(self.action)
@@ -39,15 +35,12 @@ class Actions:
         self.comId = comId
 
     def default(self):
-
         """
         Default Browsing
         """
-
         SetAction(self.socket, {"o": {"actions": ["Browsing"], "target": f"ndc://x{self.comId}/", "ndcId": int(self.comId), "params": {"duration": 27605}, "id": "363483"}, "t": 306}).start()
 
     def Browsing(self, blogId: str = None, blogType: int = 0):
-
         """
         Send Browsing Action
 
@@ -58,7 +51,6 @@ class Actions:
         **Return**
             - **SetAction**:  (Class)
         """
-
         if blogId and blogType: target = f"ndc://x{self.comId}/blog/"
         else: target = f"ndc://x{self.comId}/featured"
 
@@ -76,7 +68,6 @@ class Actions:
         return SetAction(self.socket, data)
 
     def Chatting(self, threadType: int = 2):
-
         """
         Send Chatting Action
 
@@ -86,7 +77,6 @@ class Actions:
         **Return**
             - **SetAction**:  (Class)
         """
-
         data = {
             "o": {
                 "actions": ["Chatting"],
@@ -105,14 +95,12 @@ class Actions:
         return SetAction(self.socket, data)
 
     def PublicChats(self):
-
         """
         Send PublicChats Action
 
         **Return**
             - **SetAction**:  (Class)
         """
-
         data = {
             "o": {
                 "actions": ["Browsing"],
@@ -127,14 +115,12 @@ class Actions:
         return SetAction(self.socket, data)
 
     def LeaderBoards(self):
-
         """
         Send LeaderBoard Action
 
         **Return**
             - **SetAction**:  (Class)
         """
-
         data = {
             "o": {
                 "actions": ["Browsing"],
@@ -149,7 +135,6 @@ class Actions:
         return SetAction(self.socket, data)
 
     def Custom(self, actions: [str, list], target: str, params: dict):
-
         """
         Send Custom Action
 
@@ -161,7 +146,6 @@ class Actions:
         **Return**
             - **SetAction**:  (Class)
         """
-
         data = {
             "o": {
                 "actions": actions,
@@ -182,7 +166,6 @@ class WssClient:
         self.socket = socket
 
     def joinVoiceChat(self, comId: str, chatId: str, joinType: int = 1):
-
         """
         Join The Voice Chat
 
@@ -191,7 +174,6 @@ class WssClient:
             - **chatId**: ID of the Chat (str)
             - **joinType**: Join type to Join Voice as.. (int)
         """
-
         data = {
             "o": {
                 "ndcId": int(comId),
@@ -205,7 +187,6 @@ class WssClient:
         self.wss.send(data)
 
     def joinVideoChat(self, comId: str, chatId: str, joinType: int = 1):
-
         """
         Join The Video Chat
 
@@ -214,7 +195,6 @@ class WssClient:
             - **chatId**: ID of the Chat (str)
             - **joinType**: Join type to Join Video as.. (int)
         """
-
         data = {
             "o": {
                 "ndcId": int(comId),
@@ -229,7 +209,6 @@ class WssClient:
         self.wss.send(data)
 
     def startVoiceChat(self, comId, chatId: str, joinType: int = 1):
-
         """
         Start The Voice Chat
 
@@ -238,7 +217,6 @@ class WssClient:
             - **chatId**: ID of the Chat (str)
             - **joinType**: Join type to Start voice as.. (int)
         """
-
         data = {
             "o": {
                 "ndcId": comId,
@@ -263,7 +241,6 @@ class WssClient:
         self.wss.send(data)
 
     def endVoiceChat(self, comId: str, chatId: str, leaveType: int = 2):
-
         """
         End The Voice Chat
 
@@ -272,7 +249,6 @@ class WssClient:
             - **chatId**: ID of the Chat (str)
             - **leaveType**: Leave type to end voice as.. (int)
         """
-
         data = {
             "o": {
                 "ndcId": comId,
@@ -286,15 +262,13 @@ class WssClient:
         self.wss.send(data)
 
     def joinVideoChatAsSpectator(self, comId: str, chatId: str):
-
         """
         Join Video Chat As Spectator
 
         **Parameters**
-            - **comId**: ID of the Community.
-            - **chatId**: ID of the Chat.
+            - **comId**: ID of the Community (str)
+            - **chatId**: ID of the Chat (str)
         """
-
         data = {
             "o": {
                 "ndcId": int(comId),
@@ -308,18 +282,16 @@ class WssClient:
         self.wss.send(data)
 
     def playVideo(self, comId: str, chatId: str, path: str, title: str, background: BinaryIO):
-
         """
         Play Custom Video
 
         **Parameters**
-            - **comId** : ID of the Community.
-            - **chatId** : ID of the Chat
-            - **path** : Video Path
-            - **title** : Video Title
-            - **background** : Background of the video
+            - **comId** : ID of the Community (str)
+            - **chatId** : ID of the Chat (str)
+            - **path** : Video Path (str)
+            - **title** : Video Title (str)
+            - **background** : Background of the video (BinaryIO)
         """
-
         icon = self.wss.upload_media(background, "image")
         self.wss.send({"o": {"ndcId": int(comId), "threadId": chatId, "joinRole": 1, "id": "10335106"}, "t": 112})
         self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "channelType": 5, "id": "10335436"}, "t": 108})
@@ -328,15 +300,13 @@ class WssClient:
         self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "playlist": {"currentItemIndex": 0, "currentItemStatus": 2, "items": [{"author": None, "duration": 28.815, "isDone": True, "mediaList": [[100, icon, None]], "title": title, "type": 1, "url": f"file:///storage/emulated/0/{path}"}]}, "id": "10366159"}, "t": 120})
 
     def getActionUsers(self, comId: str, path: str):
-
         """
         Get Action Users
 
         **Parameters**
-            - **comId**: ID of the Community.
-            - **path**: Example: "users-chatting"
+            - **comId**: ID of the Community (str)
+            - **path**: Example: "users-chatting" (str)
         """
-
         data = {
             "o": {
                 "ndcId": int(comId),
@@ -355,14 +325,12 @@ class WssClient:
 
 class Wss:
     def __init__(self, headers: dict, trace: bool = False):
-
         """
         Scheduling WssClient with Wss
 
         **Parameters**
-            - **headers**: Your Amino Headers
+            - **headers**: Your Amino Headers (dict)
         """
-
         self.api = 'https://aminoapps.com/api-p'
         self.socket_url = "wss://ws1.narvii.com"
         websocket.enableTrace(trace)
@@ -377,7 +345,6 @@ class Wss:
             Exception({"api:message": "Headers Should Contains \"NDCAUTH\" and \"NDCDEVICEID\" header or key"})
 
     def send(self, data):
-
         """
         Send data to wss
 
@@ -387,14 +354,12 @@ class Wss:
         self.socket.send(json.dumps(data))
 
     def receive(self):
-
         """
         Receive data from wss
 
         **Returns**
             - **data**: Received data (json)
         """
-
         return json.loads(self.socket.recv())
 
     def webSocketUrl(self):
@@ -405,23 +370,19 @@ class Wss:
             return self.socket_url
 
     def launch(self):
-
         """
         Launching the Socket
         """
-
         self.headers = {'cookie': self.sid}
         self.socket.connect(self.webSocketUrl(), header=self.headers)
 
     def getClient(self):
-
         """
         Get Amino Websocket Types
 
         **Returns**
             - **WssClient**: A Client With Amino Socket Functions (Class)
         """
-
         return WssClient(self.socket, self)
 
     def uploadMedia(self, file: BinaryIO, fileType: str):
