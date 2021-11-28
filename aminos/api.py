@@ -1,11 +1,17 @@
+import hmac
+import threading
 import time
 import json
-from typing import BinaryIO
-
+import base64
 import requests
 import websocket
-from .src.exception import Exception
+from time import time
+from hashlib import sha1
+from time import timezone
+from typing import BinaryIO
 from .src import headers as header
+from json_minify import json_minify
+from .src.exception import exception
 
 
 class SetAction:
@@ -38,7 +44,9 @@ class Actions:
         """
         Default Browsing
         """
-        SetAction(self.socket, {"o": {"actions": ["Browsing"], "target": f"ndc://x{self.comId}/", "ndcId": int(self.comId), "params": {"duration": 27605}, "id": "363483"}, "t": 306}).start()
+        SetAction(self.socket, {
+            "o": {"actions": ["Browsing"], "target": f"ndc://x{self.comId}/", "ndcId": int(self.comId),
+                  "params": {"duration": 27605}, "id": "363483"}, "t": 306}).start()
 
     def Browsing(self, blogId: str = None, blogType: int = 0):
         """
@@ -51,8 +59,10 @@ class Actions:
         **Return**
             - **SetAction**:  (Class)
         """
-        if blogId and blogType: target = f"ndc://x{self.comId}/blog/"
-        else: target = f"ndc://x{self.comId}/featured"
+        if blogId and blogType:
+            target = f"ndc://x{self.comId}/blog/"
+        else:
+            target = f"ndc://x{self.comId}/featured"
 
         data = {
             "o": {
@@ -281,23 +291,65 @@ class WssClient:
         time.sleep(2)
         self.wss.send(data)
 
-    def playVideo(self, comId: str, chatId: str, path: str, title: str, background: BinaryIO):
+    def playVideo(self, comId: str, chatId: str, path: str, title: str, background: BinaryIO, duration: int):
         """
         Play Custom Video
 
         **Parameters**
             - **comId** : ID of the Community (str)
             - **chatId** : ID of the Chat (str)
-            - **path** : Video Path (str)
+            - **path** : Video Path | /C:/Users/User/Downloads/video.mp4 | /storage/emulated/0/Download/video.mp4 (str)
             - **title** : Video Title (str)
             - **background** : Background of the video (BinaryIO)
+            - **duration** : length of the mp4/mp3 (int)
         """
-        icon = self.wss.upload_media(background, "image")
-        self.wss.send({"o": {"ndcId": int(comId), "threadId": chatId, "joinRole": 1, "id": "10335106"}, "t": 112})
-        self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "channelType": 5, "id": "10335436"}, "t": 108})
-        self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "playlist": {"currentItemIndex": 0, "currentItemStatus": 1, "items": [{"author": None, "duration": 28.815, "isDone": False, "mediaList": [[100, icon, None]], "title": title, "type": 1, "url": f"file:///storage/emulated/0/{path}"}]}, "id": "10336041"}, "t": 120})
-        self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "playlist": {"currentItemIndex": 0, "currentItemStatus": 2, "items": [{"author": None, "duration": 28.815, "isDone": False, "mediaList": [[100, icon, None]], "title": title, "type": 1, "url": f"file:///storage/emulated/0/{path}"}]}, "id": "10337809"}, "t": 120})
-        self.wss.send({"o": {"ndcId": comId, "threadId": chatId, "playlist": {"currentItemIndex": 0, "currentItemStatus": 2, "items": [{"author": None, "duration": 28.815, "isDone": True, "mediaList": [[100, icon, None]], "title": title, "type": 1, "url": f"file:///storage/emulated/0/{path}"}]}, "id": "10366159"}, "t": 120})
+        icon = self.wss.uploadMedia(background, "image")
+        d1 = {"o": {"ndcId": int(comId), "threadId": chatId, "joinRole": 1, "id": "10335106"}, "t": 112}
+        d2 = {"o": {"ndcId": comId, "threadId": chatId, "channelType": 5, "id": "10335436"}, "t": 108}
+        d3 = {
+            "o": {
+                "ndcId": comId,
+                "threadId": chatId,
+                "playlist": {
+                    "currentItemIndex": 0,
+                    "currentItemStatus": 1,
+                    "items": [{
+                            "author": None, "duration": duration,
+                            "isDone": False,
+                            "mediaList": [[100, icon, None]],
+                            "title": title, "type": 1,
+                            "url": f"file://{path}"
+                    }]
+                },
+                "id": "10336041"
+            },
+            "t": 120
+        }
+        d4 = {
+            "o": {
+                "ndcId": comId,
+                "threadId": chatId,
+                "playlist": {
+                    "currentItemIndex": 0,
+                    "currentItemStatus": 1,
+                    "items": [{
+                            "author": None, "duration": duration,
+                            "isDone": True,
+                            "mediaList": [[100, icon, None]],
+                            "title": title, "type": 1,
+                            "url": f"file://{path}"
+                    }]
+                },
+                "id": "10336041"
+            },
+            "t": 120
+        }
+        self.wss.send(d1)
+        self.wss.send(d2)
+        time.sleep(2)
+        self.wss.send(d3)
+        time.sleep(3)
+        self.wss.send(d4)
 
     def getActionUsers(self, comId: str, path: str):
         """
@@ -315,11 +367,13 @@ class WssClient:
             },
             "t": 300
         }
-        self.wss.send(data)
         time.sleep(2)
+        self.wss.send(data)
+        time.sleep(0.50)
         return self.wss.receive()
 
     def actions(self, comId: str, chatId: str):
+        threading.Thread(target=self.wss.sendActive, args=(comId, 25, )).start()
         return Actions(self.wss, comId, chatId)
 
 
@@ -331,6 +385,7 @@ class Wss:
         **Parameters**
             - **headers**: Your Amino Headers (dict)
         """
+        self.narvi = "https://service.narvii.com/api/v1/"
         self.api = 'https://aminoapps.com/api-p'
         self.socket_url = "wss://ws1.narvii.com"
         websocket.enableTrace(trace)
@@ -342,7 +397,7 @@ class Wss:
             header.headers = headers
             self.headers = header.Headers().headers
         else:
-            Exception({"api:message": "Headers Should Contains \"NDCAUTH\" and \"NDCDEVICEID\" header or key"})
+            exception({"api:message": "Headers Should Contains \"NDCAUTH\" and \"NDCDEVICEID\" header or key"})
 
     def send(self, data):
         """
@@ -364,7 +419,8 @@ class Wss:
 
     def webSocketUrl(self):
         req = requests.get("https://aminoapps.com/api/chat/web-socket-url", headers={'cookie': self.sid})
-        if req.status_code != 200: return Exception(req.json())
+        if req.status_code != 200:
+            return exception(req.json())
         else:
             self.socket_url = req.json()["result"]["url"]
             return self.socket_url
@@ -386,9 +442,12 @@ class Wss:
         return WssClient(self.socket, self)
 
     def uploadMedia(self, file: BinaryIO, fileType: str):
-        if fileType == "audio": typee = "audio/aac"
-        elif fileType == "image": typee = "image/jpg"
-        else: raise TypeError("[i] Report this error in Discord Server as [15:0]")
+        if fileType == "audio":
+            typee = "audio/aac"
+        elif fileType == "image":
+            typee = "image/jpg"
+        else:
+            raise TypeError("[i] Report this error in Discord Server as [15:0]")
 
         data = file.read()
         headers = self.headers
@@ -396,5 +455,42 @@ class Wss:
         headers["content-length"] = str(len(data))
 
         req = requests.post(f"{self.api}/g/s/media/upload", data=data, headers=headers)
-        if req.json()["api:statuscode"] != 0: return Exception(req.json())
-        else: return req.json()["mediaValue"]
+        if req.json()["api:statuscode"] != 0:
+            return exception(req.json())
+        else:
+            return req.json()["mediaValue"]
+
+    def sendActive(self, comId: str, rang: int = 1, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(time() * 1000)):
+        """
+        Send A Active Time To Community
+
+        **Returns**
+            - **Success**: Post Request objects (
+            - **WssClient**: A Client With Amino Socket Functions (Class)
+        """
+        chunkes = []
+
+        for i in range(rang):
+            start = int(time())
+            end = start + 300
+            chunkes.append({"start": start, "end": end})
+
+        data = {
+            "userActiveTimeChunkList": chunkes,
+            "timestamp": timestamp,
+            "optInAdsFlags": 2147483647,
+            "timezone": tz
+        }
+
+        if timers:
+            data["userActiveTimeChunkList"] = timers
+
+        data = json_minify(json.dumps(data))
+        headers = self.headers
+        headers["Content-Type"] = "application/json; charset=utf-8",
+        headers["User-Agent"] = "Dalvik/2.1.0 (Linux; U; Android 9; Redmi Note 8 Build/PKQ1.190616.001; com.narvii.amino.master/3.4.33578)",
+        headers["NDC-MSG-SIG"] = base64.b64encode(b"\x22" + hmac.new(bytes.fromhex("307c3c8cd389e69dc298d951341f88419a8377f4"), data.encode(), sha1).digest()).decode()
+        headers["Content-Length"] = str(len(data))
+        req = requests.post(f"{self.narvi}/x{comId}/s/community/stats/user-active-time", headers=headers, data=data)
+        if req.json()["api:statuscode"] != 0: return exception(req.json())
+        else: return req
