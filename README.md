@@ -2,7 +2,7 @@
 ![pypi](https://img.shields.io/badge/Amino_Sockets-Docs-orange)
 ](https://https://amino-socket.readthedocs.io/)
 [
-![pypi](https://img.shields.io/badge/pypi-v1.0.0-blue)
+![pypi](https://img.shields.io/badge/pypi-v1.0.2-blue)
 ](https://pypi.org/project/Amino-Socket/)
 
 ## Amino-Socket 
