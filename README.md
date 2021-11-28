@@ -1,6 +1,6 @@
 [
 ![pypi](https://img.shields.io/badge/Amino_Sockets-Examples-orange)
-](https://pypi.org/project/Amino-Socket/Examples)
+](https://https://amino-socket.readthedocs.io/)
 [
 ![pypi](https://img.shields.io/badge/Amino--Socket%20build%20and%20test-passing-brightgreen?logo=github&labelColor=black)
 ](https://github.com/Hanamixp/Amino-Socket)
