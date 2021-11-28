@@ -14,4 +14,4 @@ Amino-Socket is an Amino client for Python. It provides to access [aminoapps](ht
 You can use either `python3 setup.py install` or `pip3 install Amino-Socket` to install.
 - **Note** This Python Module tested on `python3.10`
 ### Documentation
-This project's documentation can be found at https://Amino-Socket.readthedocs.io/
+This project's documentation can be found at [![pypi](https://img.shields.io/badge/Amino_Sockets-Docs-orange)](https://https://amino-socket.readthedocs.io/)
