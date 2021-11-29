@@ -5,7 +5,7 @@
 ![pypi](https://img.shields.io/badge/Amino--Socket%20build%20and%20test-passing-brightgreen?logo=github&labelColor=black)
 ](https://github.com/Hanamixp/Amino-Socket)
 [
-![pypi](https://img.shields.io/badge/pypi-Docs-blue)
+![pypi](https://img.shields.io/badge/pypi-1.0.3-blue)
 ](https://pypi.org/project/Amino-Socket)
 
 ### Amino-Socket 
