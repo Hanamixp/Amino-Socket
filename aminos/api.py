@@ -1,10 +1,10 @@
 import hmac
-import threading
-import time
 import json
 import base64
 import requests
 import websocket
+import threading
+import time as timer
 from time import time
 from hashlib import sha1
 from time import timezone
@@ -193,7 +193,7 @@ class WssClient:
             },
             "t": 112
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
 
     def joinVideoChat(self, comId: str, chatId: str, joinType: int = 1):
@@ -215,7 +215,7 @@ class WssClient:
             },
             "t": 108
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
 
     def startVoiceChat(self, comId, chatId: str, joinType: int = 1):
@@ -236,7 +236,7 @@ class WssClient:
             },
             "t": 112
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
         data = {
             "o": {
@@ -247,7 +247,7 @@ class WssClient:
             },
             "t": 108
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
 
     def endVoiceChat(self, comId: str, chatId: str, leaveType: int = 2):
@@ -268,7 +268,7 @@ class WssClient:
             },
             "t": 112
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
 
     def joinVideoChatAsSpectator(self, comId: str, chatId: str):
@@ -288,12 +288,67 @@ class WssClient:
             },
             "t": 112
         }
-        time.sleep(2)
+        timer.sleep(2)
+        self.wss.send(data)
+
+    def threadJoin(self, comId: str, chatId: str):
+        data = {
+            "o": {
+                "ndcId": int(comId),
+                "threadId": chatId,
+                "joinRole": 1,
+                "id": "10335106"
+            },
+            "t": 112
+        }
+        self.wss.send(data)
+
+    def channelJoin(self, comId: str, chatId: str):
+        data = {
+            "o": {
+                "ndcId": int(comId),
+                "threadId": chatId,
+                "channelType": 5,
+                "id": "10335436"
+            },
+            "t": 108
+        }
+        self.wss.send(data)
+
+    def videoPlayer(self, comId: str, chatId: str, path: str, title: str, background: str, duration: int):
+        self.actions(comId, chatId).Chatting().start()
+        self.threadJoin(comId, chatId)
+        self.channelJoin(comId, chatId)
+        data = {
+            "o": {
+                "ndcId": int(comId),
+                "threadId": chatId,
+                "playlist": {
+                    "currentItemIndex": 0,
+                    "currentItemStatus": 1,
+                    "items": [{
+                        "author": None,
+                        "duration": duration,
+                        "isDone": False,
+                        "mediaList": [[100, background, None]],
+                        "title": title,
+                        "type": 1,
+                        "url": f"file://{path}"
+                    }]
+                },
+                "id": "3423239"
+            },
+            "t": 120
+        }
+        self.wss.send(data)
+        timer.sleep(2)
+        data["o"]["playlist"]["currentItemStatus"] = 2
+        data["o"]["playlist"]["items"][0]["isDone"] = True
         self.wss.send(data)
 
     def playVideo(self, comId: str, chatId: str, path: str, title: str, background: BinaryIO, duration: int):
         """
-        Play Custom Video
+        Play Custom Vide
 
         **Parameters**
             - **comId** : ID of the Community (str)
@@ -303,53 +358,7 @@ class WssClient:
             - **background** : Background of the video (BinaryIO)
             - **duration** : length of the mp4/mp3 (int)
         """
-        icon = self.wss.uploadMedia(background, "image")
-        d1 = {"o": {"ndcId": int(comId), "threadId": chatId, "joinRole": 1, "id": "10335106"}, "t": 112}
-        d2 = {"o": {"ndcId": comId, "threadId": chatId, "channelType": 5, "id": "10335436"}, "t": 108}
-        d3 = {
-            "o": {
-                "ndcId": comId,
-                "threadId": chatId,
-                "playlist": {
-                    "currentItemIndex": 0,
-                    "currentItemStatus": 1,
-                    "items": [{
-                            "author": None, "duration": duration,
-                            "isDone": False,
-                            "mediaList": [[100, icon, None]],
-                            "title": title, "type": 1,
-                            "url": f"file://{path}"
-                    }]
-                },
-                "id": "10336041"
-            },
-            "t": 120
-        }
-        d4 = {
-            "o": {
-                "ndcId": comId,
-                "threadId": chatId,
-                "playlist": {
-                    "currentItemIndex": 0,
-                    "currentItemStatus": 1,
-                    "items": [{
-                            "author": None, "duration": duration,
-                            "isDone": True,
-                            "mediaList": [[100, icon, None]],
-                            "title": title, "type": 1,
-                            "url": f"file://{path}"
-                    }]
-                },
-                "id": "10336041"
-            },
-            "t": 120
-        }
-        self.wss.send(d1)
-        self.wss.send(d2)
-        time.sleep(2)
-        self.wss.send(d3)
-        time.sleep(3)
-        self.wss.send(d4)
+        threading.Thread(target=self.videoPlayer, args=(comId, chatId, path, title, self.wss.uploadMedia(background, "image"), duration)).start()
 
     def getActionUsers(self, comId: str, path: str):
         """
@@ -367,9 +376,11 @@ class WssClient:
             },
             "t": 300
         }
-        time.sleep(2)
+        timer.sleep(2)
         self.wss.send(data)
-        time.sleep(0.50)
+        data["t"] += 2
+        self.wss.send(data)
+        timer.sleep(0.50)
         return self.wss.receive()
 
     def actions(self, comId: str, chatId: str):
@@ -466,7 +477,7 @@ class Wss:
         headers["content-type"] = typee
         headers["content-length"] = str(len(data))
 
-        response = requests.post(f"{self.api}/g/s/media/upload", data=data, headers=headers)
+        response = requests.post(f"{self.narvi}/g/s/media/upload", data=data, headers=headers)
         if response.json()["api:statuscode"] != 0:
             return exception(response.json())
         else:
