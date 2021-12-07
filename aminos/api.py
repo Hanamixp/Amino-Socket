@@ -1,17 +1,187 @@
-import hmac
 import json
-import base64
 import requests
 import websocket
 import threading
 import time as timer
-from time import time
-from hashlib import sha1
-from time import timezone
 from typing import BinaryIO
 from .src import headers as header
-from json_minify import json_minify
 from .src.exception import exception
+from sys import _getframe as getframe
+from .src.objects import Event, Payload
+
+
+class Callbacks:
+    def __init__(self):
+        self.handlers = {}
+
+        self.methods = {
+            10: self._resolve_payload,
+            304: self._resolve_chat_action_start,
+            306: self._resolve_chat_action_end,
+            1000: self._resolve_chat_message
+        }
+
+        self.chat_methods = {
+            "0:0": self.on_text_message,
+            "0:100": self.on_image_message,
+            "0:103": self.on_youtube_message,
+            "1:0": self.on_strike_message,
+            "2:110": self.on_voice_message,
+            "3:113": self.on_sticker_message,
+            "50:0": self.TYPE_USER_SHARE_EXURL,
+            "51:0": self.TYPE_USER_SHARE_USER,
+            "52:0": self.on_voice_chat_not_answered,
+            "53:0": self.on_voice_chat_not_cancelled,
+            "54:0": self.on_voice_chat_not_declined,
+            "55:0": self.on_video_chat_not_answered,
+            "56:0": self.on_video_chat_not_cancelled,
+            "57:0": self.on_video_chat_not_declined,
+            "58:0": self.on_avatar_chat_not_answered,
+            "59:0": self.on_avatar_chat_not_cancelled,
+            "60:0": self.on_avatar_chat_not_declined,
+            "100:0": self.on_delete_message,
+            "101:0": self.on_group_member_join,
+            "102:0": self.on_group_member_leave,
+            "103:0": self.on_chat_invite,
+            "104:0": self.on_chat_background_changed,
+            "105:0": self.on_chat_title_changed,
+            "106:0": self.on_chat_icon_changed,
+            "107:0": self.on_voice_chat_start,
+            "108:0": self.on_video_chat_start,
+            "109:0": self.on_avatar_chat_start,
+            "110:0": self.on_voice_chat_end,
+            "111:0": self.on_video_chat_end,
+            "112:0": self.on_avatar_chat_end,
+            "113:0": self.on_chat_content_changed,
+            "114:0": self.on_screen_room_start,
+            "115:0": self.on_screen_room_end,
+            "116:0": self.on_chat_host_transfered,
+            "117:0": self.on_text_message_force_removed,
+            "118:0": self.on_chat_removed_message,
+            "119:0": self.on_text_message_removed_by_admin,
+            "120:0": self.on_chat_tip,
+            "121:0": self.on_chat_pin_announcement,
+            "122:0": self.on_voice_chat_permission_open_to_everyone,
+            "123:0": self.on_voice_chat_permission_invited_and_requested,
+            "124:0": self.on_voice_chat_permission_invite_only,
+            "125:0": self.on_chat_view_only_enabled,
+            "126:0": self.on_chat_view_only_disabled,
+            "127:0": self.on_chat_unpin_announcement,
+            "128:0": self.on_chat_tipping_enabled,
+            "129:0": self.on_chat_tipping_disabled,
+            "65281:0": self.on_timestamp_message,
+            "65282:0": self.on_welcome_message,
+            "65283:0": self.on_invite_message
+        }
+
+        self.notif_methods = {
+            "53": self.on_member_set_you_host,
+            "67": self.on_member_set_you_cohost,
+            "68": self.on_member_remove_you_cohost
+        }
+
+        self.chat_actions_start = {
+            "Typing": self.on_user_typing_start,
+        }
+
+        self.chat_actions_end = {
+            "Typing": self.on_user_typing_end,
+        }
+
+    def _resolve_payload(self, data):
+        key = f"{data['o']['payload']['notifType']}"
+        return self.notif_methods.get(key, self.default)(data)
+
+    def _resolve_chat_message(self, data):
+        key = f"{data['o']['chatMessage']['type']}:{data['o']['chatMessage'].get('mediaType', 0)}"
+        return self.chat_methods.get(key, self.default)(data)
+
+    def _resolve_chat_action_start(self, data):
+        key = data['o'].get('actions', 0)
+        return self.chat_actions_start.get(key, self.default)(data)
+
+    def _resolve_chat_action_end(self, data):
+        key = data['o'].get('actions', 0)
+        return self.chat_actions_end.get(key, self.default)(data)
+
+    def resolve(self, data):
+        data = json.loads(data)
+        return self.methods.get(data["t"], self.default)(data)
+
+    def call(self, type, data):
+        if type in self.handlers:
+            for handler in self.handlers[type]:
+                handler(data)
+
+    def event(self, type):
+        def registerHandler(handler):
+            if type in self.handlers:
+                self.handlers[type].append(handler)
+            else:
+                self.handlers[type] = [handler]
+            return handler
+
+        return registerHandler
+
+    def on_member_set_you_host(self, data): self.call(getframe(0).f_code.co_name, Payload(data["o"]).Payload)
+    def on_member_remove_you_cohost(self, data): self.call(getframe(0).f_code.co_name, Payload(data["o"]).Payload)
+    def on_member_set_you_cohost(self, data): self.call(getframe(0).f_code.co_name, Payload(data["o"]).Payload)
+
+    def on_text_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_image_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_youtube_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_strike_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_sticker_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def TYPE_USER_SHARE_EXURL(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def TYPE_USER_SHARE_USER(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_not_answered(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_not_cancelled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_not_declined(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_video_chat_not_answered(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_video_chat_not_cancelled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_video_chat_not_declined(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_avatar_chat_not_answered(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_avatar_chat_not_cancelled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_avatar_chat_not_declined(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_delete_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_group_member_join(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_group_member_leave(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_invite(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_background_changed(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_title_changed(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_icon_changed(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_start(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_video_chat_start(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_avatar_chat_start(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_end(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_video_chat_end(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_avatar_chat_end(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_content_changed(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_screen_room_start(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_screen_room_end(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_host_transfered(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_text_message_force_removed(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_removed_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_text_message_removed_by_admin(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_tip(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_pin_announcement(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_permission_open_to_everyone(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_permission_invited_and_requested(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_voice_chat_permission_invite_only(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_view_only_enabled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_view_only_disabled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_unpin_announcement(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_tipping_enabled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_chat_tipping_disabled(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_timestamp_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_welcome_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_invite_message(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+
+    def on_user_typing_start(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+    def on_user_typing_end(self, data): self.call(getframe(0).f_code.co_name, Event(data["o"]).Event)
+
+    def default(self, data): self.call(getframe(0).f_code.co_name, data)
 
 
 class SetAction:
@@ -348,12 +518,12 @@ class WssClient:
 
     def playVideo(self, comId: str, chatId: str, path: str, title: str, background: BinaryIO, duration: int):
         """
-        Play Custom Vide
+        Play Custom Video
 
         **Parameters**
             - **comId** : ID of the Community (str)
             - **chatId** : ID of the Chat (str)
-            - **path** : Video Path | /C:/Users/User/Downloads/video.mp4 | /storage/emulated/0/Download/video.mp4 (str)
+            - **path** : Video Path | /storage/emulated/0/Download/video.mp4 (str)
             - **title** : Video Title (str)
             - **background** : Background of the video (BinaryIO)
             - **duration** : length of the mp4/mp3 (int)
@@ -384,11 +554,11 @@ class WssClient:
         return self.wss.receive()
 
     def actions(self, comId: str, chatId: str):
-        threading.Thread(target=self.wss.sendActive, args=(comId, 25, )).start()
+        threading.Thread(target=self.wss.sendWebActive, args=(comId, )).start()
         return Actions(self.wss, comId, chatId)
 
 
-class Wss:
+class Wss(Callbacks):
     def __init__(self, headers: dict, trace: bool = False):
         """
         Scheduling WssClient with Wss
@@ -396,31 +566,22 @@ class Wss:
         **Parameters**
             - **headers**: Your Amino Headers (dict)
         """
-        heders = {
-            "Content-Type": "application/json; charset=utf-8",
-            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 9; Redmi Note 8 Build/PKQ1.190616.001; com.narvii.amino.master/3.4.33578)",
-            "AUID": "dfec1b8a-92f7-4cf0-928c-3b60aa33429a",
-            "SMDEVICEID": "6e28d4c5-2d25-4977-93ec-9a4ce077fb7b",
-            "Host": "service.narvii.com",
-            "Connection": "Keep-Alive",
-            "Accept-Encoding": "gzip",
-        }
-        self.narvi = "https://service.narvii.com/api/v1/"
-        self.api = 'https://aminoapps.com/api-p'
-        self.socket_url = "wss://ws1.narvii.com"
-        websocket.enableTrace(trace)
-        self.socket = websocket.WebSocket()
 
+        Callbacks.__init__(self)
         if headers.get("NDCAUTH") and headers.get("NDCDEVICEID"):
             self.sid = headers["NDCAUTH"]
             self.deviceid = headers["NDCDEVICEID"]
-            heders["NDCDEVICEID"] = self.deviceid
-            heders["NDCAUTH"] = self.sid
-            header.headers = heders
             self.headers = header.Headers().headers
-
+            self.web_headers = header.Headers(sid=self.sid).web_headers
+            self.headers.update(headers)
         else:
             exception({"api:message": "Headers Should Contains \"NDCAUTH\" and \"NDCDEVICEID\" header or key"})
+
+        self.narvi = "https://service.narvii.com/api/v1/"
+        self.socket_url = "wss://ws1.narvii.com"
+        self.lastMessage = {}
+        websocket.enableTrace(trace)
+        self.socket = websocket.WebSocketApp(self.webSocketUrl(), on_message=self.on_message, header=self.web_headers)
 
     def send(self, data):
         """
@@ -433,15 +594,19 @@ class Wss:
 
     def receive(self):
         """
-        Receive data from wss
+        Receive data from ws
 
         **Returns**
             - **data**: Received data (json)
         """
-        return json.loads(self.socket.recv())
+        return self.lastMessage
+
+    def on_message(self, data):
+        self.lastMessage = json.loads(data)
+        self.resolve(data)
 
     def webSocketUrl(self):
-        response = requests.get("https://aminoapps.com/api/chat/web-socket-url", headers={'cookie': self.sid})
+        response = requests.get("https://aminoapps.com/api/chat/web-socket-url", headers=self.web_headers)
         if response.status_code != 200:
             return exception(response.json())
         else:
@@ -452,8 +617,7 @@ class Wss:
         """
         Launching the Socket
         """
-        head = {'cookie': self.sid}
-        self.socket.connect(self.webSocketUrl(), header=head)
+        threading.Thread(target=self.socket.run_forever, kwargs={"ping_interval": 60}).start()
 
     def getClient(self):
         """
@@ -483,37 +647,16 @@ class Wss:
         else:
             return response.json()["mediaValue"]
 
-    def sendActive(self, comId: str, rang: int = 1, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(time() * 1000)):
+    def sendWebActive(self, comId: str):
         """
         Send A Active Time To Community
 
         **Returns**
-            - **Success**: Post Request objects (
-            - **WssClient**: A Client With Amino Socket Functions (Class)
+            - **Success**: Post Request objects
         """
-        chunkes = []
-
-        for i in range(rang):
-            start = int(time())
-            end = start + 300
-            chunkes.append({"start": start, "end": end})
-
-        data = {
-            "userActiveTimeChunkList": chunkes,
-            "timestamp": timestamp,
-            "optInAdsFlags": 2147483647,
-            "timezone": tz
-        }
-
-        if timers:
-            data["userActiveTimeChunkList"] = timers
-
-        data = json_minify(json.dumps(data))
-        headers: dict = self.headers
-        headers["NDC-MSG-SIG"] = base64.b64encode(b"\x22" + hmac.new(bytes.fromhex("307c3c8cd389e69dc298d951341f88419a8377f4"), data.encode(), sha1).digest()).decode()
-        headers["Content-Length"] = str(len(data))
-        response = requests.post(f"{self.narvi}/x{comId}/s/community/stats/user-active-time", headers=headers, data=data)
-        if response.json()["api:statuscode"] != 0:
+        data = {"ndcId": comId}
+        response = requests.post("https://aminoapps.com/api/community/stats/web-user-active-time", json=data, headers=self.web_headers)
+        if response.json()["code"] != 200:
             return exception(response.json())
         else:
             return response
