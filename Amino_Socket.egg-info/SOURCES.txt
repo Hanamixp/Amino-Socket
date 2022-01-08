@@ -11,3 +11,4 @@ aminos/api.py
 aminos/src/__init__.py
 aminos/src/exception.py
 aminos/src/headers.py
+aminos/src/objects.py
